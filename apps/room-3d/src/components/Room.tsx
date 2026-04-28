@@ -69,6 +69,12 @@ const modeShortcuts: Record<string, ViewMode> = {
   "3": "orbit"
 };
 
+const commandModeShortcuts: Record<string, ViewMode> = {
+  t: "top",
+  w: "walk",
+  o: "orbit"
+};
+
 const movementKeyCodes = new Set(["KeyW", "KeyA", "KeyS", "KeyD", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"]);
 
 const getTopCameraDistance = (camera: PerspectiveCamera) => {
@@ -1000,6 +1006,16 @@ export const Room = () => {
         searchInputRef.current?.focus();
         searchInputRef.current?.select();
         return;
+      }
+
+      if (event.metaKey || event.ctrlKey) {
+        const nextMode = commandModeShortcuts[event.key.toLowerCase()];
+
+        if (nextMode) {
+          event.preventDefault();
+          setMode(nextMode);
+          return;
+        }
       }
 
       if (isTextEntryTarget(event.target)) {
