@@ -473,7 +473,12 @@ const VisibleMatchCounter = ({ items, onChange }: { items: RoomItem[]; onChange:
   return null;
 };
 
-const clampPercent = (value: number) => `${Math.min(100, Math.max(0, value))}%`;
+const clampPercentValue = (value: number) => Math.min(100, Math.max(0, value));
+
+const getMapPosition = (item: RoomItem) => ({
+  x: clampPercentValue(((item.position[0] + ROOM_DIMENSIONS.width / 2) / ROOM_DIMENSIONS.width) * 100),
+  y: clampPercentValue(((item.position[2] + ROOM_DIMENSIONS.depth / 2) / ROOM_DIMENSIONS.depth) * 100)
+});
 
 const MiniMap = ({
   items,
@@ -481,7 +486,8 @@ const MiniMap = ({
   selectedItem,
   hoveredItem,
   searchActive,
-  cameraMarkerRef
+  cameraMarkerRef,
+  routeLineRef
 }: {
   items: RoomItem[];
   matchedIds: Set<string>;
@@ -489,13 +495,20 @@ const MiniMap = ({
   hoveredItem: RoomItem | null;
   searchActive: boolean;
   cameraMarkerRef: RefObject<HTMLSpanElement | null>;
+  routeLineRef: RefObject<SVGLineElement | null>;
 }) => {
   const selectedId = selectedItem?.id;
   const hoveredId = hoveredItem?.id;
-  const displayItems = useMemo(
-    () => (searchActive && matchedIds.size > 0 ? items.filter((item) => matchedIds.has(item.id)) : items.filter((_, index) => index % 2 === 0)),
-    [items, matchedIds, searchActive]
-  );
+  const routeEnd = selectedItem ? getMapPosition(selectedItem) : null;
+  const displayItems = useMemo(() => {
+    const baseItems = searchActive && matchedIds.size > 0 ? items.filter((item) => matchedIds.has(item.id)) : items.filter((_, index) => index % 2 === 0);
+
+    if (!selectedItem || baseItems.some((item) => item.id === selectedItem.id)) {
+      return baseItems;
+    }
+
+    return [...baseItems, selectedItem];
+  }, [items, matchedIds, searchActive, selectedItem]);
 
   return (
     <aside className="minimap" aria-label="Room map">
@@ -508,9 +521,15 @@ const MiniMap = ({
         <div className="minimap-wall south" />
         <div className="minimap-wall east" />
         <div className="minimap-wall west" />
+        {routeEnd ? (
+          <svg className="minimap-route" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+            <line ref={routeLineRef} x1="50" y1="50" x2={routeEnd.x} y2={routeEnd.y} />
+          </svg>
+        ) : null}
         {displayItems.map((item) => {
-          const left = clampPercent(((item.position[0] + ROOM_DIMENSIONS.width / 2) / ROOM_DIMENSIONS.width) * 100);
-          const top = clampPercent(((item.position[2] + ROOM_DIMENSIONS.depth / 2) / ROOM_DIMENSIONS.depth) * 100);
+          const mapPosition = getMapPosition(item);
+          const left = `${mapPosition.x}%`;
+          const top = `${mapPosition.y}%`;
           const isActive = item.id === selectedId || item.id === hoveredId;
           const isMatch = matchedIds.has(item.id);
 
@@ -528,12 +547,19 @@ const MiniMap = ({
   );
 };
 
-const CameraTracker = ({ cameraMarkerRef }: { cameraMarkerRef: RefObject<HTMLSpanElement | null> }) => {
+const CameraTracker = ({
+  cameraMarkerRef,
+  routeLineRef
+}: {
+  cameraMarkerRef: RefObject<HTMLSpanElement | null>;
+  routeLineRef: RefObject<SVGLineElement | null>;
+}) => {
   const direction = useMemo(() => new Vector3(), []);
   const lastUpdate = useRef(0);
 
   useFrame(({ camera, clock }) => {
     const marker = cameraMarkerRef.current;
+    const routeLine = routeLineRef.current;
 
     if (!marker || clock.elapsedTime - lastUpdate.current < 0.12) {
       return;
@@ -541,9 +567,17 @@ const CameraTracker = ({ cameraMarkerRef }: { cameraMarkerRef: RefObject<HTMLSpa
 
     lastUpdate.current = clock.elapsedTime;
     camera.getWorldDirection(direction);
-    marker.style.left = clampPercent(((camera.position.x + ROOM_DIMENSIONS.width / 2) / ROOM_DIMENSIONS.width) * 100);
-    marker.style.top = clampPercent(((camera.position.z + ROOM_DIMENSIONS.depth / 2) / ROOM_DIMENSIONS.depth) * 100);
+    const cameraX = clampPercentValue(((camera.position.x + ROOM_DIMENSIONS.width / 2) / ROOM_DIMENSIONS.width) * 100);
+    const cameraY = clampPercentValue(((camera.position.z + ROOM_DIMENSIONS.depth / 2) / ROOM_DIMENSIONS.depth) * 100);
+
+    marker.style.left = `${cameraX}%`;
+    marker.style.top = `${cameraY}%`;
     marker.style.transform = `translate(-50%, -50%) rotate(${-Math.atan2(direction.x, direction.z)}rad)`;
+
+    if (routeLine) {
+      routeLine.setAttribute("x1", cameraX.toFixed(2));
+      routeLine.setAttribute("y1", cameraY.toFixed(2));
+    }
   });
 
   return null;
@@ -925,6 +959,7 @@ export const Room = () => {
   const [walkLookEnabled, setWalkLookEnabled] = useState(false);
   const [walkResetSignal, setWalkResetSignal] = useState(0);
   const cameraMarkerRef = useRef<HTMLSpanElement | null>(null);
+  const routeLineRef = useRef<SVGLineElement | null>(null);
   const normalizedInlineQuery = searchInput.trim().toLowerCase();
   const normalizedWorldQuery = worldSearchQuery.trim().toLowerCase();
   const worldSearchActive = normalizedWorldQuery.length > 0;
@@ -1074,7 +1109,7 @@ export const Room = () => {
         />
         {hoveredItem ? <ItemTooltip item={hoveredItem} /> : null}
         <VisibleMatchCounter items={worldMatchingItems} onChange={setVisibleMatchCount} />
-        <CameraTracker cameraMarkerRef={cameraMarkerRef} />
+        <CameraTracker cameraMarkerRef={cameraMarkerRef} routeLineRef={routeLineRef} />
         <SceneControls mode={mode} walkLookEnabled={walkLookEnabled} walkResetSignal={walkResetSignal} />
       </Canvas>
 
@@ -1108,6 +1143,7 @@ export const Room = () => {
         hoveredItem={hoveredItem}
         searchActive={worldSearchActive}
         cameraMarkerRef={cameraMarkerRef}
+        routeLineRef={routeLineRef}
       />
     </main>
   );
