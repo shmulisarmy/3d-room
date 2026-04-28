@@ -738,6 +738,7 @@ const ControlPanel = ({
   onModeChange,
   query,
   worldQuery,
+  searchInputRef,
   walkLookEnabled,
   onQueryChange,
   onClearQuery,
@@ -757,6 +758,7 @@ const ControlPanel = ({
   onModeChange: (mode: ViewMode) => void;
   query: string;
   worldQuery: string;
+  searchInputRef: RefObject<HTMLInputElement | null>;
   walkLookEnabled: boolean;
   onQueryChange: (query: string) => void;
   onClearQuery: () => void;
@@ -847,6 +849,7 @@ const ControlPanel = ({
       <div className={searchFieldClassName}>
         <Search aria-hidden="true" size={17} strokeWidth={2.2} />
         <input
+          ref={searchInputRef}
           type="search"
           aria-label="Search items"
           value={query}
@@ -958,6 +961,7 @@ export const Room = () => {
   const [visibleMatchCount, setVisibleMatchCount] = useState(0);
   const [walkLookEnabled, setWalkLookEnabled] = useState(false);
   const [walkResetSignal, setWalkResetSignal] = useState(0);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
   const cameraMarkerRef = useRef<HTMLSpanElement | null>(null);
   const routeLineRef = useRef<SVGLineElement | null>(null);
   const normalizedInlineQuery = searchInput.trim().toLowerCase();
@@ -991,6 +995,13 @@ export const Room = () => {
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "f") {
+        event.preventDefault();
+        searchInputRef.current?.focus();
+        searchInputRef.current?.select();
+        return;
+      }
+
       if (isTextEntryTarget(event.target)) {
         return;
       }
@@ -1118,6 +1129,7 @@ export const Room = () => {
         onModeChange={setMode}
         query={searchInput}
         worldQuery={worldSearchQuery}
+        searchInputRef={searchInputRef}
         walkLookEnabled={walkLookEnabled}
         onQueryChange={handleSearchInputChange}
         onClearQuery={handleClearSearch}
