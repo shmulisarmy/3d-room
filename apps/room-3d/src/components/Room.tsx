@@ -708,6 +708,7 @@ const ControlPanel = ({
   onQueryChange,
   onClearQuery,
   onApplyQuery,
+  onRecallPreviousWorldFilter,
   resultItems,
   onSelectItem,
   onPreviewItem,
@@ -726,6 +727,7 @@ const ControlPanel = ({
   onQueryChange: (query: string) => void;
   onClearQuery: () => void;
   onApplyQuery: () => void;
+  onRecallPreviousWorldFilter: () => boolean;
   resultItems: RoomItem[];
   onSelectItem: (item: RoomItem) => void;
   onPreviewItem: (item: RoomItem | null) => void;
@@ -768,6 +770,11 @@ const ControlPanel = ({
     if (event.key === "Enter") {
       event.preventDefault();
       onApplyQuery();
+      return;
+    }
+
+    if (event.key === "ArrowUp" && onRecallPreviousWorldFilter()) {
+      event.preventDefault();
     }
   };
 
@@ -906,6 +913,12 @@ export const Room = () => {
   const [mode, setMode] = useState<ViewMode>("top");
   const [searchInput, setSearchInput] = useState(initialSearchQuery);
   const [worldSearchQuery, setWorldSearchQuery] = useState(initialSearchQuery);
+  const [worldFilterHistory, setWorldFilterHistory] = useState<string[]>(() => {
+    const initialTerm = initialSearchQuery.trim();
+
+    return initialTerm.length > 0 ? [initialTerm] : [];
+  });
+  const [worldFilterHistoryCursor, setWorldFilterHistoryCursor] = useState<number | null>(null);
   const [selectedItem, setSelectedItem] = useState<RoomItem | null>(null);
   const [hoveredItem, setHoveredItem] = useState<RoomItem | null>(null);
   const [visibleMatchCount, setVisibleMatchCount] = useState(0);
@@ -950,6 +963,7 @@ export const Room = () => {
       if (event.key === "Escape") {
         setSearchInput("");
         setWorldSearchQuery("");
+        setWorldFilterHistoryCursor(null);
         setSelectedItem(null);
         setWalkLookEnabled(false);
         return;
@@ -994,13 +1008,38 @@ export const Room = () => {
     window.history.replaceState(null, "", url);
   }, [worldSearchQuery]);
 
+  const handleSearchInputChange = (query: string) => {
+    setSearchInput(query);
+    setWorldFilterHistoryCursor(null);
+  };
+
   const handleClearSearch = () => {
-    setSearchInput("");
+    handleSearchInputChange("");
     setWorldSearchQuery("");
   };
 
   const handleApplySearch = () => {
-    setWorldSearchQuery(searchInput);
+    const nextWorldFilter = searchInput.trim();
+
+    setWorldSearchQuery(nextWorldFilter);
+    setWorldFilterHistoryCursor(null);
+
+    if (nextWorldFilter.length > 0) {
+      setWorldFilterHistory((history) => [...history, nextWorldFilter]);
+    }
+  };
+
+  const handleRecallPreviousWorldFilter = () => {
+    if (worldFilterHistory.length === 0) {
+      return false;
+    }
+
+    const nextCursor = worldFilterHistoryCursor === null ? worldFilterHistory.length - 1 : Math.max(0, worldFilterHistoryCursor - 1);
+
+    setWorldFilterHistoryCursor(nextCursor);
+    setSearchInput(worldFilterHistory[nextCursor]);
+
+    return true;
   };
 
   return (
@@ -1045,9 +1084,10 @@ export const Room = () => {
         query={searchInput}
         worldQuery={worldSearchQuery}
         walkLookEnabled={walkLookEnabled}
-        onQueryChange={setSearchInput}
+        onQueryChange={handleSearchInputChange}
         onClearQuery={handleClearSearch}
         onApplyQuery={handleApplySearch}
+        onRecallPreviousWorldFilter={handleRecallPreviousWorldFilter}
         resultItems={previewResultItems}
         onSelectItem={setSelectedItem}
         onPreviewItem={setHoveredItem}
