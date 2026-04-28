@@ -117,6 +117,73 @@ input {
   display: none;
 }
 
+.panel-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.settings-button {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  color: #5e4936;
+  background: rgba(255, 255, 255, 0.58);
+  border: 1px solid rgba(75, 55, 35, 0.1);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.settings-button:hover,
+.settings-button.active {
+  color: #211810;
+  background: #ffffff;
+  box-shadow: 0 1px 7px rgba(62, 43, 25, 0.13);
+}
+
+.settings-menu {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(73, 53, 35, 0.12);
+  border-radius: 8px;
+}
+
+.settings-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+
+.settings-row span,
+.settings-row output {
+  color: #5f4935;
+  font-size: 12px;
+  font-weight: 760;
+  line-height: 1.2;
+}
+
+.settings-row output {
+  color: #2b2118;
+  white-space: nowrap;
+}
+
+.settings-menu input[type="range"] {
+  width: 100%;
+  margin: 0;
+  accent-color: #b88928;
+  cursor: pointer;
+}
+
 .mode-toggle {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -662,6 +729,11 @@ input {
     max-width: 84px;
   }
 
+  .settings-button {
+    width: 28px;
+    height: 28px;
+  }
+
   .result-count-full {
     display: none;
   }
@@ -723,6 +795,11 @@ input {
     max-width: 88px;
     padding-right: 7px;
     padding-left: 7px;
+  }
+
+  .settings-button {
+    width: 28px;
+    height: 28px;
   }
 
   .result-count-full {
