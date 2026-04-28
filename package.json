@@ -1,0 +1,10 @@
+{
+  "name": "room-3d-workspace",
+  "private": true,
+  "packageManager": "pnpm@10.11.0",
+  "scripts": {
+    "dev": "pnpm --filter room-3d dev",
+    "build": "pnpm --filter room-3d build",
+    "typecheck": "pnpm --filter room-3d typecheck"
+  }
+}

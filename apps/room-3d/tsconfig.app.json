@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@assets/*": ["../../attached_assets/*"]
+    },
+    "types": ["vite/client"]
+  },
+  "include": ["src"]
+}
