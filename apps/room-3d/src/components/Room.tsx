@@ -1,6 +1,6 @@
 import { Html, OrbitControls, useTexture } from "@react-three/drei";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Circle, Footprints, Map, PackageSearch, Search, Settings, X, type LucideIcon } from "lucide-react";
+import { Circle, CornerDownLeft, Footprints, Globe2, Map, PackageSearch, Search, X, type LucideIcon } from "lucide-react";
 import { Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState, type ComponentRef, type RefObject } from "react";
 import { DoubleSide, Frustum, MathUtils, Matrix4, SRGBColorSpace, Texture, Vector3, type PerspectiveCamera } from "three";
 import referenceOne from "@assets/WhatsApp Image 2026-04-27 at 17.57.16.jpeg";
@@ -9,13 +9,6 @@ import referenceThree from "@assets/WhatsApp Image 2026-04-27 at 17.57.17 (1).jp
 import { ItemMesh, ProductPreview } from "@/components/Items";
 import { Player } from "@/components/Player";
 import { buildRoom, ROOM_DIMENSIONS, type RoomItem, type Shelf } from "@/lib/items";
-import {
-  DEFAULT_SEARCH_UPDATE_DELAY_MS,
-  SEARCH_UPDATE_DELAY_MAX_MS,
-  SEARCH_UPDATE_DELAY_MIN_MS,
-  SEARCH_UPDATE_DELAY_STEP_MS,
-  SEARCH_UPDATE_DELAY_STORAGE_KEY
-} from "@/settings";
 
 type ViewMode = "top" | "walk" | "orbit";
 type OrbitControlsHandle = ComponentRef<typeof OrbitControls>;
@@ -62,23 +55,6 @@ const getInitialSearchQuery = () => {
   }
 
   return new URLSearchParams(window.location.search).get("q")?.slice(0, 80) ?? "";
-};
-
-const clampSearchUpdateDelay = (delayMs: number) => Math.min(SEARCH_UPDATE_DELAY_MAX_MS, Math.max(SEARCH_UPDATE_DELAY_MIN_MS, delayMs));
-
-const getInitialSearchUpdateDelayMs = () => {
-  if (typeof window === "undefined") {
-    return DEFAULT_SEARCH_UPDATE_DELAY_MS;
-  }
-
-  try {
-    const storedDelay = window.localStorage.getItem(SEARCH_UPDATE_DELAY_STORAGE_KEY);
-    const parsedDelay = storedDelay === null ? Number.NaN : Number(storedDelay);
-
-    return Number.isFinite(parsedDelay) ? clampSearchUpdateDelay(parsedDelay) : DEFAULT_SEARCH_UPDATE_DELAY_MS;
-  } catch {
-    return DEFAULT_SEARCH_UPDATE_DELAY_MS;
-  }
 };
 
 const isTextEntryTarget = (target: EventTarget | null) =>
@@ -727,43 +703,43 @@ const ControlPanel = ({
   mode,
   onModeChange,
   query,
-  activeQuery,
-  searchUpdateDelayMs,
+  worldQuery,
   walkLookEnabled,
   onQueryChange,
   onClearQuery,
-  onSearchUpdateDelayChange,
+  onApplyQuery,
   resultItems,
   onSelectItem,
   onPreviewItem,
   totalItems,
-  totalMatches,
-  visibleMatches,
+  inlineMatches,
+  worldMatches,
+  visibleWorldMatches,
   hoveredItem,
   selectedItem
 }: {
   mode: ViewMode;
   onModeChange: (mode: ViewMode) => void;
   query: string;
-  activeQuery: string;
-  searchUpdateDelayMs: number;
+  worldQuery: string;
   walkLookEnabled: boolean;
   onQueryChange: (query: string) => void;
   onClearQuery: () => void;
-  onSearchUpdateDelayChange: (delayMs: number) => void;
+  onApplyQuery: () => void;
   resultItems: RoomItem[];
   onSelectItem: (item: RoomItem) => void;
   onPreviewItem: (item: RoomItem | null) => void;
   totalItems: number;
-  totalMatches: number;
-  visibleMatches: number;
+  inlineMatches: number;
+  worldMatches: number;
+  visibleWorldMatches: number;
   hoveredItem: RoomItem | null;
   selectedItem: RoomItem | null;
 }) => {
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const currentMode = modeOptions.find((option) => option.value === mode) ?? modeOptions[0];
   const trimmedQuery = query.trim();
-  const activeTrimmedQuery = activeQuery.trim();
+  const worldTrimmedQuery = worldQuery.trim();
+  const worldFilterChanged = trimmedQuery !== worldTrimmedQuery;
   const instruction =
     mode === "walk"
       ? walkLookEnabled
@@ -771,25 +747,23 @@ const ControlPanel = ({
         : "Mouse look off. Click items freely. Press S to turn with the mouse."
       : currentMode.instruction;
   const resultText =
-    activeTrimmedQuery.length > 0
-      ? totalMatches > 0
-        ? `${visibleMatches} in view / ${totalMatches} matches`
+    worldTrimmedQuery.length > 0
+      ? worldMatches > 0
+        ? `${visibleWorldMatches} in view / ${worldMatches} matches`
         : "No matches"
       : `${totalItems} items`;
   const compactResultText =
-    activeTrimmedQuery.length > 0
-      ? totalMatches > 0
-        ? `${visibleMatches}/${totalMatches}`
+    worldTrimmedQuery.length > 0
+      ? worldMatches > 0
+        ? `${visibleWorldMatches}/${worldMatches}`
         : "None"
       : `${totalItems}`;
   const activeItem = hoveredItem ?? selectedItem;
-  const hasResults = activeTrimmedQuery.length > 0 && resultItems.length > 0;
-  const delayLabelId = "search-delay-label";
-  const handleDelayChange = (value: string) => {
-    const nextDelay = Number(value);
-
-    if (Number.isFinite(nextDelay)) {
-      onSearchUpdateDelayChange(clampSearchUpdateDelay(nextDelay));
+  const hasResults = trimmedQuery.length > 0 && resultItems.length > 0;
+  const handleSearchKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      onApplyQuery();
     }
   };
 
@@ -801,39 +775,12 @@ const ControlPanel = ({
           <span>Grocery shelf explorer</span>
         </div>
         <div className="panel-actions">
-          <span className={totalMatches === 0 && activeTrimmedQuery.length > 0 ? "result-count empty" : "result-count"} aria-label={resultText}>
+          <span className={worldMatches === 0 && worldTrimmedQuery.length > 0 ? "result-count empty" : "result-count"} aria-label={resultText}>
             <span className="result-count-full">{resultText}</span>
             <span className="result-count-short">{compactResultText}</span>
           </span>
-          <button
-            type="button"
-            className={settingsOpen ? "settings-button active" : "settings-button"}
-            aria-label="Search settings"
-            aria-expanded={settingsOpen}
-            onClick={() => setSettingsOpen((open) => !open)}
-          >
-            <Settings aria-hidden="true" size={16} strokeWidth={2.2} />
-          </button>
         </div>
       </div>
-
-      {settingsOpen ? (
-        <div className="settings-menu" aria-label="Search settings">
-          <div className="settings-row">
-            <span id={delayLabelId}>Search delay</span>
-            <output>{searchUpdateDelayMs} ms</output>
-          </div>
-          <input
-            type="range"
-            min={SEARCH_UPDATE_DELAY_MIN_MS}
-            max={SEARCH_UPDATE_DELAY_MAX_MS}
-            step={SEARCH_UPDATE_DELAY_STEP_MS}
-            value={searchUpdateDelayMs}
-            aria-labelledby={delayLabelId}
-            onChange={(event) => handleDelayChange(event.target.value)}
-          />
-        </div>
-      ) : null}
 
       <div className="mode-toggle" role="group" aria-label="View mode">
         {modeOptions.map(({ value, label, Icon }) => (
@@ -860,7 +807,13 @@ const ControlPanel = ({
           value={query}
           placeholder="Search milk, olive oil, chips"
           onChange={(event) => onQueryChange(event.target.value)}
+          onKeyDown={handleSearchKeyDown}
         />
+        {worldFilterChanged ? (
+          <button type="button" className="apply-filter-button" aria-label="Apply search to room" onClick={onApplyQuery}>
+            <CornerDownLeft aria-hidden="true" size={16} strokeWidth={2.3} />
+          </button>
+        ) : null}
         {query.length > 0 ? (
           <button type="button" className="clear-search" aria-label="Clear search" onClick={onClearQuery}>
             <X aria-hidden="true" size={16} strokeWidth={2.4} />
@@ -881,8 +834,18 @@ const ControlPanel = ({
         ))}
       </div>
 
+      <div className={worldFilterChanged ? "world-filter pending" : "world-filter"}>
+        <Globe2 aria-hidden="true" size={15} strokeWidth={2.2} />
+        <span>World filter</span>
+        <strong>{worldTrimmedQuery.length > 0 ? worldTrimmedQuery : "None"}</strong>
+      </div>
+
       {hasResults ? (
-        <div className="result-list" aria-label="Search results">
+        <div className="result-list" aria-label="Live search results">
+          <div className="result-list-header">
+            <span>Quick results</span>
+            <span>{inlineMatches}</span>
+          </div>
           {resultItems.slice(0, 7).map((item) => (
             <button
               key={`result-${item.id}`}
@@ -902,7 +865,7 @@ const ControlPanel = ({
             </button>
           ))}
         </div>
-      ) : activeTrimmedQuery.length > 0 ? (
+      ) : trimmedQuery.length > 0 ? (
         <div className="empty-results">No products match that search.</div>
       ) : null}
 
@@ -936,53 +899,35 @@ const WebGLFallback = () => (
 export const Room = () => {
   const room = useMemo(() => buildRoom(), []);
   const initialSearchQuery = useMemo(getInitialSearchQuery, []);
-  const initialSearchUpdateDelayMs = useMemo(getInitialSearchUpdateDelayMs, []);
   const [mode, setMode] = useState<ViewMode>("top");
   const [searchInput, setSearchInput] = useState(initialSearchQuery);
-  const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
-  const [searchUpdateDelayMs, setSearchUpdateDelayMs] = useState(initialSearchUpdateDelayMs);
+  const [worldSearchQuery, setWorldSearchQuery] = useState(initialSearchQuery);
   const [selectedItem, setSelectedItem] = useState<RoomItem | null>(null);
   const [hoveredItem, setHoveredItem] = useState<RoomItem | null>(null);
   const [visibleMatchCount, setVisibleMatchCount] = useState(0);
   const [walkLookEnabled, setWalkLookEnabled] = useState(false);
   const [walkResetSignal, setWalkResetSignal] = useState(0);
   const cameraMarkerRef = useRef<HTMLSpanElement | null>(null);
-  const normalizedQuery = searchQuery.trim().toLowerCase();
-  const searchActive = normalizedQuery.length > 0;
+  const normalizedInlineQuery = searchInput.trim().toLowerCase();
+  const normalizedWorldQuery = worldSearchQuery.trim().toLowerCase();
+  const worldSearchActive = normalizedWorldQuery.length > 0;
 
-  const matchingItems = useMemo(
-    () => (normalizedQuery.length === 0 ? [] : room.items.filter((item) => item.name.toLowerCase().includes(normalizedQuery))),
-    [normalizedQuery, room.items]
+  const inlineMatchingItems = useMemo(
+    () => (normalizedInlineQuery.length === 0 ? [] : room.items.filter((item) => item.name.toLowerCase().includes(normalizedInlineQuery))),
+    [normalizedInlineQuery, room.items]
   );
 
-  const matchedIds = useMemo(() => new Set(matchingItems.map((item) => item.id)), [matchingItems]);
-  const previewResultItems = useMemo(() => matchingItems.slice(0, 7), [matchingItems]);
+  const worldMatchingItems = useMemo(
+    () => (normalizedWorldQuery.length === 0 ? [] : room.items.filter((item) => item.name.toLowerCase().includes(normalizedWorldQuery))),
+    [normalizedWorldQuery, room.items]
+  );
 
-  useEffect(() => {
-    if (searchInput === searchQuery) {
-      return;
-    }
-
-    const timer = window.setTimeout(() => {
-      setSearchQuery(searchInput);
-    }, searchUpdateDelayMs);
-
-    return () => {
-      window.clearTimeout(timer);
-    };
-  }, [searchInput, searchQuery, searchUpdateDelayMs]);
-
-  useEffect(() => {
-    try {
-      window.localStorage.setItem(SEARCH_UPDATE_DELAY_STORAGE_KEY, String(searchUpdateDelayMs));
-    } catch {
-      // localStorage can be unavailable in private or restricted browser contexts.
-    }
-  }, [searchUpdateDelayMs]);
+  const matchedIds = useMemo(() => new Set(worldMatchingItems.map((item) => item.id)), [worldMatchingItems]);
+  const previewResultItems = useMemo(() => inlineMatchingItems.slice(0, 7), [inlineMatchingItems]);
 
   useEffect(() => {
     setVisibleMatchCount(0);
-  }, [normalizedQuery, mode]);
+  }, [normalizedWorldQuery, mode]);
 
   useEffect(() => {
     setHoveredItem(null);
@@ -1000,7 +945,7 @@ export const Room = () => {
 
       if (event.key === "Escape") {
         setSearchInput("");
-        setSearchQuery("");
+        setWorldSearchQuery("");
         setSelectedItem(null);
         setWalkLookEnabled(false);
         return;
@@ -1036,18 +981,22 @@ export const Room = () => {
   useEffect(() => {
     const url = new URL(window.location.href);
 
-    if (searchQuery.trim().length > 0) {
-      url.searchParams.set("q", searchQuery.trim());
+    if (worldSearchQuery.trim().length > 0) {
+      url.searchParams.set("q", worldSearchQuery.trim());
     } else {
       url.searchParams.delete("q");
     }
 
     window.history.replaceState(null, "", url);
-  }, [searchQuery]);
+  }, [worldSearchQuery]);
 
   const handleClearSearch = () => {
     setSearchInput("");
-    setSearchQuery("");
+    setWorldSearchQuery("");
+  };
+
+  const handleApplySearch = () => {
+    setWorldSearchQuery(searchInput);
   };
 
   return (
@@ -1081,7 +1030,7 @@ export const Room = () => {
           onHover={setHoveredItem}
         />
         {hoveredItem ? <ItemTooltip item={hoveredItem} /> : null}
-        <VisibleMatchCounter items={matchingItems} onChange={setVisibleMatchCount} />
+        <VisibleMatchCounter items={worldMatchingItems} onChange={setVisibleMatchCount} />
         <CameraTracker cameraMarkerRef={cameraMarkerRef} />
         <SceneControls mode={mode} walkLookEnabled={walkLookEnabled} walkResetSignal={walkResetSignal} />
       </Canvas>
@@ -1090,18 +1039,18 @@ export const Room = () => {
         mode={mode}
         onModeChange={setMode}
         query={searchInput}
-        activeQuery={searchQuery}
-        searchUpdateDelayMs={searchUpdateDelayMs}
+        worldQuery={worldSearchQuery}
         walkLookEnabled={walkLookEnabled}
         onQueryChange={setSearchInput}
         onClearQuery={handleClearSearch}
-        onSearchUpdateDelayChange={setSearchUpdateDelayMs}
+        onApplyQuery={handleApplySearch}
         resultItems={previewResultItems}
         onSelectItem={setSelectedItem}
         onPreviewItem={setHoveredItem}
         totalItems={room.items.length}
-        totalMatches={matchingItems.length}
-        visibleMatches={visibleMatchCount}
+        inlineMatches={inlineMatchingItems.length}
+        worldMatches={worldMatchingItems.length}
+        visibleWorldMatches={visibleMatchCount}
         hoveredItem={hoveredItem}
         selectedItem={selectedItem}
       />
@@ -1113,7 +1062,7 @@ export const Room = () => {
         matchedIds={matchedIds}
         selectedItem={selectedItem}
         hoveredItem={hoveredItem}
-        searchActive={searchActive}
+        searchActive={worldSearchActive}
         cameraMarkerRef={cameraMarkerRef}
       />
     </main>

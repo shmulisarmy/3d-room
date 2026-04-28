@@ -1,5 +1,0 @@
-export const DEFAULT_SEARCH_UPDATE_DELAY_MS = 300;
-export const SEARCH_UPDATE_DELAY_STORAGE_KEY = "room-3d.searchUpdateDelayMs";
-export const SEARCH_UPDATE_DELAY_MIN_MS = 100;
-export const SEARCH_UPDATE_DELAY_MAX_MS = 1000;
-export const SEARCH_UPDATE_DELAY_STEP_MS = 50;
