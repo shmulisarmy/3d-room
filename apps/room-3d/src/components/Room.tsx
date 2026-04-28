@@ -740,6 +740,10 @@ const ControlPanel = ({
   const trimmedQuery = query.trim();
   const worldTrimmedQuery = worldQuery.trim();
   const worldFilterChanged = trimmedQuery !== worldTrimmedQuery;
+  const worldFilterApplied = worldTrimmedQuery.length > 0 && !worldFilterChanged;
+  const searchFieldClassName = worldFilterApplied ? "search-field world-applied" : worldFilterChanged ? "search-field world-pending" : "search-field";
+  const worldFilterClassName = worldFilterApplied ? "world-filter applied" : worldFilterChanged ? "world-filter pending" : "world-filter";
+  const worldFilterLabel = worldFilterApplied ? "Applied to room" : worldFilterChanged ? "Room waiting" : "World filter";
   const instruction =
     mode === "walk"
       ? walkLookEnabled
@@ -799,7 +803,7 @@ const ControlPanel = ({
 
       <p className="instruction">{instruction}</p>
 
-      <div className="search-field">
+      <div className={searchFieldClassName}>
         <Search aria-hidden="true" size={17} strokeWidth={2.2} />
         <input
           type="search"
@@ -834,9 +838,9 @@ const ControlPanel = ({
         ))}
       </div>
 
-      <div className={worldFilterChanged ? "world-filter pending" : "world-filter"}>
+      <div className={worldFilterClassName}>
         <Globe2 aria-hidden="true" size={15} strokeWidth={2.2} />
-        <span>World filter</span>
+        <span>{worldFilterLabel}</span>
         <strong>{worldTrimmedQuery.length > 0 ? worldTrimmedQuery : "None"}</strong>
       </div>
 

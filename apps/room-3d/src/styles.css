@@ -212,10 +212,33 @@ input {
   background: #fffdf8;
   border: 1px solid rgba(73, 53, 35, 0.16);
   border-radius: 8px;
+  box-shadow: none;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease;
 }
 
 .search-field svg {
   flex: 0 0 auto;
+}
+
+.search-field.world-pending {
+  background: #fff8df;
+  border-color: rgba(176, 129, 33, 0.36);
+  box-shadow: 0 0 0 3px rgba(245, 190, 52, 0.16);
+}
+
+.search-field.world-applied {
+  background: #f0ffe8;
+  border-color: rgba(45, 132, 43, 0.58);
+  box-shadow:
+    0 0 0 3px rgba(71, 178, 55, 0.22),
+    0 8px 22px rgba(42, 127, 35, 0.16);
+}
+
+.search-field.world-applied svg {
+  color: #256f23;
 }
 
 .search-field input {
@@ -279,16 +302,21 @@ input {
 
 .world-filter {
   display: grid;
-  grid-template-columns: 16px auto minmax(0, 1fr);
+  grid-template-columns: 16px minmax(92px, auto) minmax(0, 1fr);
   gap: 7px;
   align-items: center;
-  min-height: 32px;
+  min-height: 34px;
   margin-top: 10px;
   padding: 7px 9px;
   color: #5f4935;
   background: rgba(235, 224, 207, 0.56);
   border: 1px solid rgba(73, 53, 35, 0.12);
   border-radius: 8px;
+  box-shadow: none;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease;
 }
 
 .world-filter.pending {
@@ -296,8 +324,21 @@ input {
   border-color: rgba(176, 129, 33, 0.22);
 }
 
+.world-filter.applied {
+  color: #225f20;
+  background: #e8ffdc;
+  border-color: rgba(45, 132, 43, 0.48);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.62),
+    0 10px 26px rgba(42, 127, 35, 0.14);
+}
+
 .world-filter svg {
   color: #65513d;
+}
+
+.world-filter.applied svg {
+  color: #238221;
 }
 
 .world-filter span,
@@ -311,10 +352,22 @@ input {
   white-space: nowrap;
 }
 
+.world-filter.applied span {
+  color: #1d711b;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
 .world-filter strong {
   color: #251a10;
   text-align: right;
   text-transform: capitalize;
+}
+
+.world-filter.applied strong {
+  color: #113e11;
+  font-size: 14px;
+  font-weight: 820;
 }
 
 .result-list {
