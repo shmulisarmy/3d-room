@@ -2,7 +2,7 @@ import { Html, OrbitControls, useTexture } from "@react-three/drei";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Circle, CornerDownLeft, Footprints, Globe2, Map, PackageSearch, Search, X, type LucideIcon } from "lucide-react";
 import { Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState, type ComponentRef, type RefObject } from "react";
-import { DoubleSide, Frustum, MathUtils, Matrix4, SRGBColorSpace, Texture, Vector3, type PerspectiveCamera } from "three";
+import { DoubleSide, Frustum, MathUtils, Matrix4, SRGBColorSpace, Texture, Vector3, type Mesh, type PerspectiveCamera } from "three";
 import referenceOne from "@assets/WhatsApp Image 2026-04-27 at 17.57.16.jpeg";
 import referenceTwo from "@assets/WhatsApp Image 2026-04-27 at 17.57.17.jpeg";
 import referenceThree from "@assets/WhatsApp Image 2026-04-27 at 17.57.17 (1).jpeg";
@@ -46,6 +46,10 @@ const referencePhotos = [referenceOne, referenceTwo, referenceThree];
 const shelfWood = "#5d4028";
 const shelfEdge = "#3a2618";
 const searchSuggestions = ["chips", "tea", "salsa", "hot sauce", "olive oil", "milk"];
+const worldRouteY = 0.055;
+const worldRouteSegmentLength = 0.34;
+const worldRouteSegmentStep = 0.52;
+const worldRouteSegmentIndexes = Array.from({ length: 34 }, (_, index) => index);
 const halfRoomWidth = ROOM_DIMENSIONS.width / 2;
 const halfRoomDepth = ROOM_DIMENSIONS.depth / 2;
 const floorXSeams = Array.from({ length: 15 }, (_, index) => -halfRoomWidth + 0.3 + index * ((ROOM_DIMENSIONS.width - 0.6) / 14));
@@ -482,6 +486,99 @@ const VisibleMatchCounter = ({ items, onChange }: { items: RoomItem[]; onChange:
   });
 
   return null;
+};
+
+const WorldRoute = ({ selectedItem }: { selectedItem: RoomItem | null }) => {
+  const routeBaseRef = useRef<Mesh | null>(null);
+  const routeTargetRef = useRef<Mesh | null>(null);
+  const routeSegmentRefs = useRef<Array<Mesh | null>>([]);
+  const start = useMemo(() => new Vector3(), []);
+  const end = useMemo(() => new Vector3(), []);
+  const delta = useMemo(() => new Vector3(), []);
+
+  useFrame(({ camera }) => {
+    const routeBase = routeBaseRef.current;
+    const routeTarget = routeTargetRef.current;
+
+    if (!routeBase || !routeTarget || !selectedItem) {
+      return;
+    }
+
+    start.set(camera.position.x, worldRouteY, camera.position.z);
+    end.set(selectedItem.position[0], worldRouteY, selectedItem.position[2]);
+    delta.subVectors(end, start);
+
+    const distance = delta.length();
+    const hasRoute = distance > 0.45;
+
+    routeBase.visible = hasRoute;
+    routeTarget.visible = true;
+    routeTarget.position.set(end.x, worldRouteY + 0.012, end.z);
+
+    if (!hasRoute) {
+      routeSegmentRefs.current.forEach((segment) => {
+        if (segment) {
+          segment.visible = false;
+        }
+      });
+      return;
+    }
+
+    const directionX = delta.x / distance;
+    const directionZ = delta.z / distance;
+    const angle = Math.atan2(directionX, directionZ);
+    const routeLength = Math.max(0.1, distance - 0.42);
+
+    routeBase.position.set(start.x + directionX * (distance / 2), worldRouteY, start.z + directionZ * (distance / 2));
+    routeBase.rotation.y = angle;
+    routeBase.scale.z = routeLength;
+
+    routeSegmentRefs.current.forEach((segment, index) => {
+      if (!segment) {
+        return;
+      }
+
+      const offset = 0.38 + index * worldRouteSegmentStep;
+
+      if (offset > distance - 0.22) {
+        segment.visible = false;
+        return;
+      }
+
+      segment.visible = true;
+      segment.position.set(start.x + directionX * offset, worldRouteY + 0.018, start.z + directionZ * offset);
+      segment.rotation.y = angle;
+    });
+  });
+
+  if (!selectedItem) {
+    return null;
+  }
+
+  return (
+    <group>
+      <mesh ref={routeBaseRef} renderOrder={2}>
+        <boxGeometry args={[0.2, 0.018, 1]} />
+        <meshBasicMaterial color="#12d7ff" transparent opacity={0.34} depthWrite={false} toneMapped={false} />
+      </mesh>
+      {worldRouteSegmentIndexes.map((index) => (
+        <mesh
+          key={`world-route-segment-${index}`}
+          ref={(segment) => {
+            routeSegmentRefs.current[index] = segment;
+          }}
+          renderOrder={3}
+        >
+          <boxGeometry args={[0.16, 0.03, worldRouteSegmentLength]} />
+          <meshBasicMaterial color="#fff3a3" transparent opacity={0.92} depthWrite={false} toneMapped={false} />
+        </mesh>
+      ))}
+      <mesh ref={routeTargetRef} renderOrder={4}>
+        <cylinderGeometry args={[0.28, 0.28, 0.03, 36]} />
+        <meshBasicMaterial color="#ff4f9a" transparent opacity={0.86} depthWrite={false} toneMapped={false} />
+      </mesh>
+    </group>
+  );
 };
 
 const clampPercentValue = (value: number) => Math.min(100, Math.max(0, value));
@@ -1139,6 +1236,7 @@ export const Room = () => {
           onSelect={setSelectedItem}
           onHover={setHoveredItem}
         />
+        <WorldRoute selectedItem={selectedItem} />
         {hoveredItem ? <ItemTooltip item={hoveredItem} /> : null}
         <VisibleMatchCounter items={worldMatchingItems} onChange={setVisibleMatchCount} />
         <CameraTracker cameraMarkerRef={cameraMarkerRef} routeLineRef={routeLineRef} />
