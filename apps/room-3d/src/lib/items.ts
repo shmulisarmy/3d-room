@@ -1,6 +1,6 @@
 export const ROOM_DIMENSIONS = {
   width: 10,
-  depth: 10,
+  depth: 14,
   height: 4
 } as const;
 
@@ -86,6 +86,8 @@ interface ProductTemplate {
 }
 
 const shelfBoardHeight = 0.07;
+const halfRoomWidth = ROOM_DIMENSIONS.width / 2;
+const halfRoomDepth = ROOM_DIMENSIONS.depth / 2;
 
 const wallRotation: Record<WallName, Vec3> = {
   south: [0, 0, 0],
@@ -229,16 +231,16 @@ const jitter = (random: () => number, amount: number) => (random() - 0.5) * amou
 
 const createShelf = (wall: WallName, height: number, level: number): Shelf => {
   const southOrNorth = wall === "south" || wall === "north";
-  const depth = wall === "south" ? 0.86 : 0.56;
-  const width = 9.7;
+  const shelfDepth = wall === "south" ? 0.86 : 0.56;
+  const alongLength = southOrNorth ? ROOM_DIMENSIONS.width - 0.3 : ROOM_DIMENSIONS.depth - 0.3;
   const position: Vec3 =
     wall === "south"
-      ? [0, height - shelfBoardHeight / 2, 4.57]
+      ? [0, height - shelfBoardHeight / 2, halfRoomDepth - shelfDepth / 2]
       : wall === "north"
-        ? [0, height - shelfBoardHeight / 2, -4.57]
+        ? [0, height - shelfBoardHeight / 2, -halfRoomDepth + shelfDepth / 2 + 0.15]
         : wall === "east"
-          ? [4.57, height - shelfBoardHeight / 2, 0]
-          : [-4.57, height - shelfBoardHeight / 2, 0];
+          ? [halfRoomWidth - shelfDepth / 2 - 0.15, height - shelfBoardHeight / 2, 0]
+          : [-halfRoomWidth + shelfDepth / 2 + 0.15, height - shelfBoardHeight / 2, 0];
 
   return {
     id: `${wall}-${level}`,
@@ -247,8 +249,8 @@ const createShelf = (wall: WallName, height: number, level: number): Shelf => {
     height,
     position,
     size: southOrNorth
-      ? makeSize(width, shelfBoardHeight, depth)
-      : makeSize(depth, shelfBoardHeight, width)
+      ? makeSize(alongLength, shelfBoardHeight, shelfDepth)
+      : makeSize(shelfDepth, shelfBoardHeight, alongLength)
   };
 };
 
@@ -263,7 +265,7 @@ const createSouthItem = (
 ): RoomItem => {
   const spacing = 9.15 / 16;
   const x = -4.575 + spacing / 2 + column * spacing + jitter(random, 0.04);
-  const z = row === "back" ? 4.66 + jitter(random, 0.03) : 4.22 + jitter(random, 0.04);
+  const z = row === "back" ? halfRoomDepth - 0.34 + jitter(random, 0.03) : halfRoomDepth - 0.78 + jitter(random, 0.04);
   const rowLift = row === "back" ? 0.08 : 0;
 
   return {
@@ -289,15 +291,17 @@ const createSideItem = (
   random: () => number,
   id: string
 ): RoomItem => {
-  const spacing = 8.85 / 12;
-  const along = -4.425 + spacing / 2 + column * spacing + jitter(random, 0.06);
-  const inset = 4.3 + jitter(random, 0.04);
+  const alongLength = wall === "north" ? ROOM_DIMENSIONS.width - 1.15 : ROOM_DIMENSIONS.depth - 1.15;
+  const spacing = alongLength / 12;
+  const along = -alongLength / 2 + spacing / 2 + column * spacing + jitter(random, 0.06);
+  const widthInset = halfRoomWidth - 0.7 + jitter(random, 0.04);
+  const depthInset = halfRoomDepth - 0.7 + jitter(random, 0.04);
   const position: Vec3 =
     wall === "north"
-      ? [along, shelfHeight + template.size.height / 2, -inset]
+      ? [along, shelfHeight + template.size.height / 2, -depthInset]
       : wall === "east"
-        ? [inset, shelfHeight + template.size.height / 2, along]
-        : [-inset, shelfHeight + template.size.height / 2, along];
+        ? [widthInset, shelfHeight + template.size.height / 2, along]
+        : [-widthInset, shelfHeight + template.size.height / 2, along];
 
   return {
     id,

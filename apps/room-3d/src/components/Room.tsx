@@ -46,6 +46,11 @@ const referencePhotos = [referenceOne, referenceTwo, referenceThree];
 const shelfWood = "#5d4028";
 const shelfEdge = "#3a2618";
 const searchSuggestions = ["chips", "tea", "salsa", "hot sauce", "olive oil", "milk"];
+const halfRoomWidth = ROOM_DIMENSIONS.width / 2;
+const halfRoomDepth = ROOM_DIMENSIONS.depth / 2;
+const floorXSeams = Array.from({ length: 15 }, (_, index) => -halfRoomWidth + 0.3 + index * ((ROOM_DIMENSIONS.width - 0.6) / 14));
+const floorZSeams = Array.from({ length: 10 }, (_, index) => -halfRoomDepth + 0.55 + index * ((ROOM_DIMENSIONS.depth - 1.1) / 9));
+const sideWallPostPositions = Array.from({ length: 4 }, (_, index) => -halfRoomDepth + 0.9 + index * ((ROOM_DIMENSIONS.depth - 1.8) / 3));
 
 const formatPosition = (item: RoomItem) => item.position.map((value) => value.toFixed(2)).join(", ");
 
@@ -123,14 +128,14 @@ const RoomShell = ({ showCeiling }: { showCeiling: boolean }) => (
       <meshStandardMaterial color="#7a5a3a" roughness={0.82} />
     </mesh>
 
-    {Array.from({ length: 15 }, (_, index) => -4.7 + index * 0.68).map((x) => (
+    {floorXSeams.map((x) => (
       <mesh key={`floor-plank-x-${x}`} position={[x, 0.003, 0]} receiveShadow>
         <boxGeometry args={[0.018, 0.012, ROOM_DIMENSIONS.depth]} />
         <meshStandardMaterial color="#5d4129" roughness={0.86} />
       </mesh>
     ))}
 
-    {Array.from({ length: 7 }, (_, index) => -4.25 + index * 1.42).map((z) => (
+    {floorZSeams.map((z) => (
       <mesh key={`floor-plank-z-${z}`} position={[0, 0.005, z]} receiveShadow>
         <boxGeometry args={[ROOM_DIMENSIONS.width, 0.01, 0.016]} />
         <meshStandardMaterial color="#8d6a45" roughness={0.82} />
@@ -152,36 +157,36 @@ const RoomShell = ({ showCeiling }: { showCeiling: boolean }) => (
       </>
     ) : null}
 
-    <mesh position={[0, ROOM_DIMENSIONS.height / 2, 5]} receiveShadow>
+    <mesh position={[0, ROOM_DIMENSIONS.height / 2, halfRoomDepth]} receiveShadow>
       <boxGeometry args={[ROOM_DIMENSIONS.width, ROOM_DIMENSIONS.height, 0.08]} />
       <meshStandardMaterial color="#e9e1d2" roughness={0.8} />
     </mesh>
-    <mesh position={[0, ROOM_DIMENSIONS.height / 2, -5]} receiveShadow>
+    <mesh position={[0, ROOM_DIMENSIONS.height / 2, -halfRoomDepth]} receiveShadow>
       <boxGeometry args={[ROOM_DIMENSIONS.width, ROOM_DIMENSIONS.height, 0.08]} />
       <meshStandardMaterial color="#e9e1d2" roughness={0.8} />
     </mesh>
-    <mesh position={[5, ROOM_DIMENSIONS.height / 2, 0]} receiveShadow>
+    <mesh position={[halfRoomWidth, ROOM_DIMENSIONS.height / 2, 0]} receiveShadow>
       <boxGeometry args={[0.08, ROOM_DIMENSIONS.height, ROOM_DIMENSIONS.depth]} />
       <meshStandardMaterial color="#e9e1d2" roughness={0.8} />
     </mesh>
-    <mesh position={[-5, ROOM_DIMENSIONS.height / 2, 0]} receiveShadow>
+    <mesh position={[-halfRoomWidth, ROOM_DIMENSIONS.height / 2, 0]} receiveShadow>
       <boxGeometry args={[0.08, ROOM_DIMENSIONS.height, ROOM_DIMENSIONS.depth]} />
       <meshStandardMaterial color="#e9e1d2" roughness={0.8} />
     </mesh>
 
-    <mesh position={[0, 0.23, 4.94]} castShadow receiveShadow>
+    <mesh position={[0, 0.23, halfRoomDepth - 0.06]} castShadow receiveShadow>
       <boxGeometry args={[ROOM_DIMENSIONS.width, 0.1, 0.08]} />
       <meshStandardMaterial color="#6a4a31" roughness={0.72} />
     </mesh>
-    <mesh position={[0, 0.23, -4.94]} castShadow receiveShadow>
+    <mesh position={[0, 0.23, -halfRoomDepth + 0.06]} castShadow receiveShadow>
       <boxGeometry args={[ROOM_DIMENSIONS.width, 0.1, 0.08]} />
       <meshStandardMaterial color="#6a4a31" roughness={0.72} />
     </mesh>
-    <mesh position={[4.94, 0.23, 0]} castShadow receiveShadow>
+    <mesh position={[halfRoomWidth - 0.06, 0.23, 0]} castShadow receiveShadow>
       <boxGeometry args={[0.08, 0.1, ROOM_DIMENSIONS.depth]} />
       <meshStandardMaterial color="#6a4a31" roughness={0.72} />
     </mesh>
-    <mesh position={[-4.94, 0.23, 0]} castShadow receiveShadow>
+    <mesh position={[-halfRoomWidth + 0.06, 0.23, 0]} castShadow receiveShadow>
       <boxGeometry args={[0.08, 0.1, ROOM_DIMENSIONS.depth]} />
       <meshStandardMaterial color="#6a4a31" roughness={0.72} />
     </mesh>
@@ -257,36 +262,36 @@ const ShelfPosts = () => {
   const verticalPostHeight = 3.55;
   const postY = verticalPostHeight / 2 + 0.28;
   const southXs = [-4.82, -2.42, 0, 2.42, 4.82];
-  const sidePositions = [-4.3, -1.45, 1.45, 4.3];
+  const northPostXs = [-4.3, -1.45, 1.45, 4.3];
 
   return (
     <group>
       {southXs.map((x) => (
-        <mesh key={`south-front-${x}`} position={[x, postY, 4.12]} castShadow receiveShadow>
+        <mesh key={`south-front-${x}`} position={[x, postY, halfRoomDepth - 0.88]} castShadow receiveShadow>
           <cylinderGeometry args={[0.035, 0.035, verticalPostHeight, 10]} />
           <meshStandardMaterial color={shelfEdge} roughness={0.68} />
         </mesh>
       ))}
       {southXs.map((x) => (
-        <mesh key={`south-back-${x}`} position={[x, postY, 4.94]} castShadow receiveShadow>
+        <mesh key={`south-back-${x}`} position={[x, postY, halfRoomDepth - 0.06]} castShadow receiveShadow>
           <cylinderGeometry args={[0.03, 0.03, verticalPostHeight, 10]} />
           <meshStandardMaterial color={shelfEdge} roughness={0.68} />
         </mesh>
       ))}
-      {sidePositions.map((x) => (
-        <mesh key={`north-${x}`} position={[x, 2.05, -4.18]} castShadow receiveShadow>
+      {northPostXs.map((x) => (
+        <mesh key={`north-${x}`} position={[x, 2.05, -halfRoomDepth + 0.82]} castShadow receiveShadow>
           <cylinderGeometry args={[0.03, 0.03, 2.8, 10]} />
           <meshStandardMaterial color={shelfEdge} roughness={0.68} />
         </mesh>
       ))}
-      {sidePositions.map((z) => (
-        <mesh key={`east-${z}`} position={[4.18, 2.05, z]} castShadow receiveShadow>
+      {sideWallPostPositions.map((z) => (
+        <mesh key={`east-${z}`} position={[halfRoomWidth - 0.82, 2.05, z]} castShadow receiveShadow>
           <cylinderGeometry args={[0.03, 0.03, 2.8, 10]} />
           <meshStandardMaterial color={shelfEdge} roughness={0.68} />
         </mesh>
       ))}
-      {sidePositions.map((z) => (
-        <mesh key={`west-${z}`} position={[-4.18, 2.05, z]} castShadow receiveShadow>
+      {sideWallPostPositions.map((z) => (
+        <mesh key={`west-${z}`} position={[-halfRoomWidth + 0.82, 2.05, z]} castShadow receiveShadow>
           <cylinderGeometry args={[0.03, 0.03, 2.8, 10]} />
           <meshStandardMaterial color={shelfEdge} roughness={0.68} />
         </mesh>
@@ -313,13 +318,13 @@ const Shelves = ({ shelves }: { shelves: Shelf[] }) => (
 const SouthWallRisers = () => (
   <group>
     {[3.5, 2.92, 2.34, 1.76, 1.18, 0.6].map((height) => (
-      <mesh key={`south-riser-${height}`} position={[0, height + 0.055, 4.47]} castShadow receiveShadow>
+      <mesh key={`south-riser-${height}`} position={[0, height + 0.055, halfRoomDepth - 0.53]} castShadow receiveShadow>
         <boxGeometry args={[9.5, 0.045, 0.12]} />
         <meshStandardMaterial color="#735136" roughness={0.76} />
       </mesh>
     ))}
     {[-3.55, -1.78, 0, 1.78, 3.55].map((x) => (
-      <mesh key={`south-bay-divider-${x}`} position={[x, 2.02, 4.1]} castShadow receiveShadow>
+      <mesh key={`south-bay-divider-${x}`} position={[x, 2.02, halfRoomDepth - 0.9]} castShadow receiveShadow>
         <boxGeometry args={[0.045, 3.36, 0.08]} />
         <meshStandardMaterial color="#26190f" roughness={0.62} />
       </mesh>
@@ -340,7 +345,7 @@ const ReferenceBackboards = () => {
   return (
     <group>
       {textures.map((texture, index) => (
-        <mesh key={referencePhotos[index]} position={[-3.18 + index * 3.18, 2.08, 4.955]}>
+        <mesh key={referencePhotos[index]} position={[-3.18 + index * 3.18, 2.08, halfRoomDepth - 0.045]}>
           <planeGeometry args={[3.05, 2.7]} />
           <meshBasicMaterial map={texture} transparent opacity={0.18} side={DoubleSide} toneMapped={false} depthWrite={false} />
         </mesh>
