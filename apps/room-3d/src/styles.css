@@ -192,6 +192,64 @@ input {
   box-shadow: 0 1px 7px rgba(62, 43, 25, 0.13);
 }
 
+.performance-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.48);
+  border: 1px solid rgba(74, 56, 38, 0.11);
+  border-radius: 8px;
+}
+
+.performance-label,
+.performance-options {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.performance-label {
+  gap: 6px;
+  color: #6a523c;
+  font-size: 12px;
+  font-weight: 760;
+}
+
+.performance-label span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.performance-options {
+  flex: 0 0 auto;
+  gap: 3px;
+  padding: 3px;
+  background: #ece3d5;
+  border-radius: 7px;
+}
+
+.performance-button {
+  min-width: 52px;
+  min-height: 26px;
+  padding: 0 9px;
+  color: #654d38;
+  background: transparent;
+  border: 0;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 760;
+}
+
+.performance-button.active {
+  color: #1f1710;
+  background: rgba(255, 255, 255, 0.86);
+}
+
 .instruction {
   min-height: 18px;
   margin: 12px 0 10px;

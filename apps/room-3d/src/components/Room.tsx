@@ -1,16 +1,17 @@
 import { Html, OrbitControls, useTexture } from "@react-three/drei";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Circle, CornerDownLeft, Footprints, Globe2, Map, PackageSearch, Search, X, type LucideIcon } from "lucide-react";
+import { Circle, CornerDownLeft, Footprints, Gauge, Globe2, Map, PackageSearch, Search, X, type LucideIcon } from "lucide-react";
 import { Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState, type ComponentRef, type RefObject } from "react";
 import { DoubleSide, Frustum, MathUtils, Matrix4, SRGBColorSpace, Texture, Vector3, type Mesh, type PerspectiveCamera } from "three";
 import referenceOne from "@assets/WhatsApp Image 2026-04-27 at 17.57.16.jpeg";
 import referenceTwo from "@assets/WhatsApp Image 2026-04-27 at 17.57.17.jpeg";
 import referenceThree from "@assets/WhatsApp Image 2026-04-27 at 17.57.17 (1).jpeg";
-import { ItemMesh, ProductPreview } from "@/components/Items";
+import { ItemMesh, ProductPreview, type ProductDetailLevel } from "@/components/Items";
 import { Player } from "@/components/Player";
 import { buildRoom, ROOM_DIMENSIONS, type RoomItem, type Shelf } from "@/lib/items";
 
 type ViewMode = "top" | "walk" | "orbit";
+type PerformanceMode = "cool" | "full";
 type OrbitControlsHandle = ComponentRef<typeof OrbitControls>;
 
 interface ModeOption {
@@ -42,6 +43,7 @@ const modeOptions: ModeOption[] = [
 ];
 
 const referencePhotos = [referenceOne, referenceTwo, referenceThree];
+const performanceModeStorageKey = "room-3d-performance-mode";
 
 const shelfWood = "#5d4028";
 const shelfEdge = "#3a2618";
@@ -56,6 +58,11 @@ const floorXSeams = Array.from({ length: 15 }, (_, index) => -halfRoomWidth + 0.
 const floorZSeams = Array.from({ length: 10 }, (_, index) => -halfRoomDepth + 0.55 + index * ((ROOM_DIMENSIONS.depth - 1.1) / 9));
 const sideWallPostPositions = Array.from({ length: 4 }, (_, index) => -halfRoomDepth + 0.9 + index * ((ROOM_DIMENSIONS.depth - 1.8) / 3));
 
+const performanceModes: Array<{ value: PerformanceMode; label: string }> = [
+  { value: "cool", label: "Cool" },
+  { value: "full", label: "Full" }
+];
+
 const formatPosition = (item: RoomItem) => item.position.map((value) => value.toFixed(2)).join(", ");
 
 const getInitialSearchQuery = () => {
@@ -64,6 +71,25 @@ const getInitialSearchQuery = () => {
   }
 
   return new URLSearchParams(window.location.search).get("q")?.slice(0, 80) ?? "";
+};
+
+const isPerformanceMode = (value: string | null): value is PerformanceMode => value === "cool" || value === "full";
+
+const getInitialPerformanceMode = (): PerformanceMode => {
+  if (typeof window === "undefined") {
+    return "cool";
+  }
+
+  const storedMode = window.localStorage.getItem(performanceModeStorageKey);
+
+  if (isPerformanceMode(storedMode)) {
+    return storedMode;
+  }
+
+  const isWindows = window.navigator.userAgent.toLowerCase().includes("windows");
+  const limitedCpu = window.navigator.hardwareConcurrency > 0 && window.navigator.hardwareConcurrency <= 6;
+
+  return isWindows || limitedCpu ? "cool" : "full";
 };
 
 const isTextEntryTarget = (target: EventTarget | null) =>
@@ -362,12 +388,14 @@ const ItemsLayer = ({
   items,
   matchedIds,
   selectedItemId,
+  productDetail,
   onSelect,
   onHover
 }: {
   items: RoomItem[];
   matchedIds: Set<string>;
   selectedItemId: string | null;
+  productDetail: ProductDetailLevel;
   onSelect: (item: RoomItem) => void;
   onHover: (item: RoomItem | null) => void;
 }) => (
@@ -378,6 +406,7 @@ const ItemsLayer = ({
         item={item}
         highlighted={matchedIds.has(item.id)}
         selected={item.id === selectedItemId}
+        detail={productDetail}
         onSelect={onSelect}
         onHover={onHover}
       />
@@ -407,7 +436,7 @@ const ItemDetailPanel = ({ item, onClose }: { item: RoomItem; onClose: () => voi
     </div>
 
     <div className="detail-preview" aria-hidden="true">
-      <Canvas dpr={[1, 2]} camera={{ fov: 34, position: [0, 0.3, 4.6], near: 0.1, far: 20 }}>
+      <Canvas dpr={1} gl={{ antialias: false, powerPreference: "low-power" }} camera={{ fov: 34, position: [0, 0.3, 4.6], near: 0.1, far: 20 }}>
         <color attach="background" args={["#f7f1e8"]} />
         <ambientLight intensity={1.2} />
         <directionalLight position={[2, 4, 3]} intensity={1.45} />
@@ -850,6 +879,8 @@ const SceneControls = ({
 const ControlPanel = ({
   mode,
   onModeChange,
+  performanceMode,
+  onPerformanceModeChange,
   query,
   worldQuery,
   searchInputRef,
@@ -870,6 +901,8 @@ const ControlPanel = ({
 }: {
   mode: ViewMode;
   onModeChange: (mode: ViewMode) => void;
+  performanceMode: PerformanceMode;
+  onPerformanceModeChange: (mode: PerformanceMode) => void;
   query: string;
   worldQuery: string;
   searchInputRef: RefObject<HTMLInputElement | null>;
@@ -956,6 +989,26 @@ const ControlPanel = ({
             <span>{label}</span>
           </button>
         ))}
+      </div>
+
+      <div className="performance-toggle" role="group" aria-label="Performance">
+        <span className="performance-label">
+          <Gauge aria-hidden="true" size={15} strokeWidth={2.2} />
+          <span>Performance</span>
+        </span>
+        <span className="performance-options">
+          {performanceModes.map(({ value, label }) => (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={performanceMode === value}
+              className={performanceMode === value ? "performance-button active" : "performance-button"}
+              onClick={() => onPerformanceModeChange(value)}
+            >
+              {label}
+            </button>
+          ))}
+        </span>
       </div>
 
       <p className="instruction">{instruction}</p>
@@ -1075,12 +1128,15 @@ export const Room = () => {
   const [visibleMatchCount, setVisibleMatchCount] = useState(0);
   const [walkLookEnabled, setWalkLookEnabled] = useState(false);
   const [walkResetSignal, setWalkResetSignal] = useState(0);
+  const [performanceMode, setPerformanceMode] = useState<PerformanceMode>(getInitialPerformanceMode);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const cameraMarkerRef = useRef<HTMLSpanElement | null>(null);
   const routeLineRef = useRef<SVGLineElement | null>(null);
   const normalizedInlineQuery = searchInput.trim().toLowerCase();
   const normalizedWorldQuery = worldSearchQuery.trim().toLowerCase();
   const worldSearchActive = normalizedWorldQuery.length > 0;
+  const coolRendering = performanceMode === "cool";
+  const productDetail: ProductDetailLevel = coolRendering ? "simple" : "detailed";
 
   const inlineMatchingItems = useMemo(
     () => (normalizedInlineQuery.length === 0 ? [] : room.items.filter((item) => item.name.toLowerCase().includes(normalizedInlineQuery))),
@@ -1178,6 +1234,10 @@ export const Room = () => {
     window.history.replaceState(null, "", url);
   }, [worldSearchQuery]);
 
+  useEffect(() => {
+    window.localStorage.setItem(performanceModeStorageKey, performanceMode);
+  }, [performanceMode]);
+
   const handleSearchInputChange = (query: string) => {
     setSearchInput(query);
     setWorldFilterHistoryCursor(null);
@@ -1216,7 +1276,10 @@ export const Room = () => {
     <main className={`room-app mode-${mode}`}>
       <Canvas
         className="scene-canvas"
-        dpr={[1, 2]}
+        dpr={coolRendering ? 1 : [1, 1.5]}
+        frameloop={mode === "top" ? "demand" : "always"}
+        gl={{ antialias: !coolRendering, powerPreference: coolRendering ? "low-power" : "high-performance" }}
+        performance={{ min: 0.55 }}
         camera={{ fov: 50, position: [0, 22.5, 0], near: 0.08, far: 80 }}
         fallback={<WebGLFallback />}
         onPointerMissed={() => setHoveredItem(null)}
@@ -1230,15 +1293,18 @@ export const Room = () => {
 
         <CameraRig mode={mode} />
         <RoomShell showCeiling={mode !== "top"} />
-        <Suspense fallback={null}>
-          <ReferenceBackboards />
-        </Suspense>
+        {coolRendering ? null : (
+          <Suspense fallback={null}>
+            <ReferenceBackboards />
+          </Suspense>
+        )}
         <Shelves shelves={room.shelves} />
         <SouthWallRisers />
         <ItemsLayer
           items={room.items}
           matchedIds={matchedIds}
           selectedItemId={selectedItem?.id ?? null}
+          productDetail={productDetail}
           onSelect={setSelectedItem}
           onHover={setHoveredItem}
         />
@@ -1252,6 +1318,8 @@ export const Room = () => {
       <ControlPanel
         mode={mode}
         onModeChange={setMode}
+        performanceMode={performanceMode}
+        onPerformanceModeChange={setPerformanceMode}
         query={searchInput}
         worldQuery={worldSearchQuery}
         searchInputRef={searchInputRef}

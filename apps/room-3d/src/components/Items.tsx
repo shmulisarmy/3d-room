@@ -7,6 +7,7 @@ interface ItemMeshProps {
   item: RoomItem;
   highlighted: boolean;
   selected: boolean;
+  detail: ProductDetailLevel;
   onSelect: (item: RoomItem) => void;
   onHover: (item: RoomItem | null) => void;
 }
@@ -14,6 +15,8 @@ interface ItemMeshProps {
 interface ProductProps {
   item: RoomItem;
 }
+
+export type ProductDetailLevel = "simple" | "detailed";
 
 interface LabelPanelProps {
   color: string;
@@ -40,6 +43,32 @@ const ShelfTag = ({ palette, size }: { palette: ProductPalette; size: ProductSiz
     <LabelPanel color={palette.accent} width={size.width * 0.12} height={size.height * 0.08} x={size.width * 0.2} y={-size.height * 0.02} z={-size.depth / 2 - 0.007} />
   </>
 );
+
+const SimpleProductGeometry = ({ item }: ProductProps) => {
+  const { width, height, depth } = item.size;
+  const palette = item.palette;
+  const isRoundProduct = ["coffeeTin", "cannedBeans", "can", "salsaJar", "honeyJar", "jamJar", "jar"].includes(item.kind);
+  const isFruit = item.kind === "apple";
+
+  if (isFruit) {
+    return (
+      <mesh scale={[width * 0.48, height * 0.42, width * 0.48]}>
+        <sphereGeometry args={[1, 10, 8]} />
+        <meshLambertMaterial color={palette.primary} />
+      </mesh>
+    );
+  }
+
+  return (
+    <>
+      <mesh>
+        {isRoundProduct ? <cylinderGeometry args={[width / 2, width / 2, height, 10]} /> : <boxGeometry args={[width, height, depth]} />}
+        <meshLambertMaterial color={palette.primary} />
+      </mesh>
+      <LabelPanel color={palette.label} width={width * 0.58} height={height * 0.28} z={-depth / 2 - 0.003} />
+    </>
+  );
+};
 
 const BoxProduct = ({ item }: ProductProps) => {
   const { width, height, depth } = item.size;
@@ -318,7 +347,11 @@ const BreadProduct = ({ item }: ProductProps) => {
   );
 };
 
-const ProductGeometry = ({ item }: ProductProps) => {
+const ProductGeometry = ({ item, detail = "detailed" }: ProductProps & { detail?: ProductDetailLevel }) => {
+  if (detail === "simple") {
+    return <SimpleProductGeometry item={item} />;
+  }
+
   switch (item.kind) {
     case "chipsBag":
     case "coffeeBag":
@@ -426,7 +459,7 @@ const SelectedMarker = ({ item }: { item: RoomItem }) => {
   );
 };
 
-export const ItemMesh = memo(function ItemMesh({ item, highlighted, selected, onSelect, onHover }: ItemMeshProps) {
+export const ItemMesh = memo(function ItemMesh({ item, highlighted, selected, detail, onSelect, onHover }: ItemMeshProps) {
   const handlePointerDown = (event: ThreeEvent<PointerEvent>) => {
     event.stopPropagation();
     onSelect(item);
@@ -451,7 +484,7 @@ export const ItemMesh = memo(function ItemMesh({ item, highlighted, selected, on
       onPointerOver={handlePointerOver}
       onPointerOut={handlePointerOut}
     >
-      <ProductGeometry item={item} />
+      <ProductGeometry item={item} detail={selected ? "detailed" : detail} />
       {selected ? <SelectedMarker item={item} /> : null}
       {highlighted ? <Highlight item={item} /> : null}
     </group>
