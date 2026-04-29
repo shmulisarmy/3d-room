@@ -497,6 +497,7 @@ const MiniMap = ({
   selectedItem,
   hoveredItem,
   searchActive,
+  onSelectItem,
   cameraMarkerRef,
   routeLineRef
 }: {
@@ -505,6 +506,7 @@ const MiniMap = ({
   selectedItem: RoomItem | null;
   hoveredItem: RoomItem | null;
   searchActive: boolean;
+  onSelectItem: (item: RoomItem) => void;
   cameraMarkerRef: RefObject<HTMLSpanElement | null>;
   routeLineRef: RefObject<SVGLineElement | null>;
 }) => {
@@ -545,9 +547,13 @@ const MiniMap = ({
           const isMatch = matchedIds.has(item.id);
 
           return (
-            <span
+            <button
               key={`map-${item.id}`}
+              type="button"
               className={isActive ? "minimap-dot active" : isMatch ? "minimap-dot match" : "minimap-dot"}
+              aria-label={`Select ${item.name} on map`}
+              title={item.name}
+              onClick={() => onSelectItem(item)}
               style={{ left, top, backgroundColor: item.palette.primary }}
             />
           );
@@ -1175,6 +1181,7 @@ export const Room = () => {
         selectedItem={selectedItem}
         hoveredItem={hoveredItem}
         searchActive={worldSearchActive}
+        onSelectItem={setSelectedItem}
         cameraMarkerRef={cameraMarkerRef}
         routeLineRef={routeLineRef}
       />
